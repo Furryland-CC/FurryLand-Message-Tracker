@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FurryLand Message Tracker</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#21262d;--text:#f0f6fc;--muted:#8b949e;--line:#30363d;--accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#a371f7}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1450px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:22px}.brand h1{margin:0;font-size:30px}.brand p{color:var(--muted);margin:6px 0 0}.tabs{display:flex;gap:8px}.tab{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:10px 18px;border-radius:9px;cursor:pointer;font-weight:700}.tab.active{background:var(--accent);color:#07111f;border-color:var(--accent)}.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:18px}.toolbar input{flex:1;max-width:420px;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:11px 13px;border-radius:9px}.summary{margin-left:auto;color:var(--muted);font-size:14px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:17px;box-shadow:0 6px 20px rgba(0,0,0,.14)}.cardhead{display:flex;justify-content:space-between;align-items:center;gap:12px}.card h2{font-size:18px;margin:0}.elapsed{font-size:12px;color:var(--muted);white-space:nowrap}.time{font-size:14px;color:#c9d1d9;margin:11px 0 14px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}.status,.comments{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px}.comments{grid-column:1/-1;min-height:68px;resize:vertical}.btn{border:0;border-radius:8px;padding:11px 10px;font-weight:800;cursor:pointer}.checked{background:var(--green);color:#061108}.open{background:var(--accent);color:#07111f}.status.waiting{border-color:var(--yellow);box-shadow:inset 4px 0 var(--yellow)}.status.offered{border-color:var(--green);box-shadow:inset 4px 0 var(--green)}.status.busy{border-color:var(--red);box-shadow:inset 4px 0 var(--red)}.status.followup{border-color:var(--purple);box-shadow:inset 4px 0 var(--purple)}.foot{margin-top:24px;color:var(--muted);font-size:12px;text-align:center}.hidden{display:none!important}@media(max-width:650px){.wrap{padding:16px}.top{align-items:flex-start;flex-direction:column}.toolbar{flex-wrap:wrap}.summary{margin-left:0;width:100%}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body><div class="wrap">
+<div class="top"><div class="brand"><h1>🐾 FurryLand Message Tracker</h1><p>Message checks, statuses, and notes in one place.</p></div><div class="tabs"><button class="tab active" data-team="usa">🇺🇸 Team USA</button><button class="tab" data-team="canada">🇨🇦 Team Canada</button></div></div>
+<div class="toolbar"><input id="search" placeholder="Search locations…"><div class="summary" id="summary"></div></div>
+<div class="grid" id="grid"></div><div class="foot"><span id="syncStatus">Connecting to shared tracker…</span></div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDixbzJzSbpVFR1nck1IaMzPeLR5-B1QQs",
+  authDomain: "data-base-for-message-tracking.firebaseapp.com",
+  databaseURL: "https://data-base-for-message-tracking-default-rtdb.firebaseio.com",
+  projectId: "data-base-for-message-tracking",
+  storageBucket: "data-base-for-message-tracking.firebasestorage.app",
+  messagingSenderId: "130006194977",
+  appId: "1:130006194977:web:4f749c5c922fefbbf7bc60",
+  measurementId: "G-QWQC8RHXPT"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const USA=["Albuquerque","Austin","Charleston","DFW","Fort Myers","Hartford","Knoxville","Little Rock","North Metro Atlanta","Northeast Dallas Metro","NoVa","OKC","Orlando","Pittsburgh","Portland","The Woodlands","Toledo","Tri-Tennessee","Twin Cities Metro","Tyler-Longview","Waco (Central Texas)","West Michigan"];
+const CANADA=[];
+const USA_URLS={"West Michigan":"https://go.moego.pet/calendar/grooming?%7Ec=117005&%7Eb=110207","Waco (Central Texas)":"https://go.moego.pet/calendar/grooming?%7Ec=116979&%7Eb=106499","Tyler-Longview":"https://go.moego.pet/calendar/grooming?%7Ec=117029&%7Eb=114030","Twin Cities Metro":"https://go.moego.pet/calendar/grooming?%7Ec=128808&%7Eb=129654","Tri-Tennessee":"https://go.moego.pet/calendar/grooming?%7Ec=119572&%7Eb=119912","Toledo":"https://go.moego.pet/calendar/grooming?%7Ec=128725&%7Eb=129567","The Woodlands":"https://go.moego.pet/calendar/grooming?%7Ec=128737&%7Eb=129579","Portland":"https://go.moego.pet/calendar/grooming?%7Ec=117031&%7Eb=115463","Pittsburgh":"https://go.moego.pet/calendar/grooming?%7Ec=121134&%7Eb=121555","Orlando":"https://go.moego.pet/calendar/grooming?%7Ec=116974&%7Eb=105809","OKC":"https://go.moego.pet/calendar/grooming?%7Ec=116991&%7Eb=108912","NoVa":"https://go.moego.pet/calendar/grooming?%7Ec=125786&%7Eb=126461","Northeast Dallas Metro":"https://go.moego.pet/calendar/grooming?%7Ec=128738&%7Eb=129580","North Metro Atlanta":"https://go.moego.pet/calendar/grooming?%7Ec=128764&%7Eb=129608","Little Rock":"https://go.moego.pet/calendar/grooming?%7Ec=117015&%7Eb=112039","Knoxville":"https://go.moego.pet/calendar/grooming?%7Ec=117002&%7Eb=110204","Hartford":"https://go.moego.pet/calendar/grooming?%7Ec=117059&%7Eb=116930","Fort Myers":"https://go.moego.pet/calendar/grooming?%7Ec=116992&%7Eb=108913","DFW":"https://go.moego.pet/calendar/grooming?%7Ec=116978&%7Eb=106498","Charleston":"https://go.moego.pet/calendar/grooming?%7Ec=117000&%7Eb=110201","Austin":"https://go.moego.pet/calendar/grooming?%7Ec=116996&%7Eb=108917","Albuquerque":"https://go.moego.pet/calendar/grooming?%7Ec=117006&%7Eb=110208"};
+
+let team='usa';
+let data={usa:{},canada:{}};
+const syncStatus=document.querySelector('#syncStatus');
+const timers={};
+function firebaseKey(loc){return loc.replace(/[.#$\[\]\/]/g,'_')}
+function ensure(loc){if(!data[team])data[team]={};if(!data[team][loc])data[team][loc]={status:'',checked:null,comment:''};return data[team][loc]}
+function statusClass(v){return v==='Waiting for Reply'?'waiting':v==='Offered Avail'?'offered':v==='Busy'?'busy':v==='Needs Follow-Up'?'followup':''}
+function elapsed(ts){if(!ts)return 'Never checked';let s=Math.max(0,Math.floor((Date.now()-ts)/1000));if(s<60)return 'Just now';let m=Math.floor(s/60);if(m<60)return m+'m ago';let h=Math.floor(m/60);if(h<24)return h+'h '+(m%60)+'m ago';return Math.floor(h/24)+'d ago'}
+function formatted(ts){return ts?new Date(ts).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'Not checked yet'}
+function locationRef(loc){return ref(db,`tracker/${team}/${firebaseKey(loc)}`)}
+async function saveFields(loc,fields){syncStatus.textContent='Saving…';try{await update(locationRef(loc),fields);syncStatus.textContent='✓ Shared sync connected'}catch(err){console.error(err);syncStatus.textContent='⚠ Could not save — check Firebase database rules'}}
+function render(){const list=team==='usa'?USA:CANADA;const q=document.querySelector('#search').value.toLowerCase();const grid=document.querySelector('#grid');grid.innerHTML='';let shown=0;
+list.filter(x=>x.toLowerCase().includes(q)).forEach(loc=>{shown++;let d=ensure(loc);let card=document.createElement('div');card.className='card';card.innerHTML=`<div class="cardhead"><h2>${loc}</h2><span class="elapsed" data-ts="${d.checked||''}">${elapsed(d.checked)}</span></div><div class="time">Last checked: <strong>${formatted(d.checked)}</strong></div><div class="controls"><select class="status ${statusClass(d.status)}"><option value="">No Status</option><option>Waiting for Reply</option><option>Offered Avail</option><option>Busy</option><option>Needs Follow-Up</option></select><button class="btn checked">✓ MARK CHECKED</button><textarea class="comments" placeholder="Add comments / notes…"></textarea><button class="btn open">OPEN MESSAGES ↗</button></div>`;
+let sel=card.querySelector('.status');sel.value=d.status||'';sel.onchange=e=>saveFields(loc,{status:e.target.value});let ta=card.querySelector('.comments');ta.value=d.comment||'';ta.oninput=e=>{clearTimeout(timers[team+loc]);const val=e.target.value;timers[team+loc]=setTimeout(()=>saveFields(loc,{comment:val}),500)};card.querySelector('.checked').onclick=()=>saveFields(loc,{checked:Date.now()});card.querySelector('.open').onclick=()=>{let url=team==='usa'?USA_URLS[loc]:null;if(url)window.open(url,'_blank','noopener');else alert('No message link has been added for '+loc+' yet.')};grid.appendChild(card)});
+document.querySelector('#summary').textContent=shown+' location'+(shown===1?'':'s')+' shown';if(!list.length)grid.innerHTML='<div class="card"><h2>Canada is ready for locations</h2><p style="color:var(--muted)">Send me the Team Canada location list and I’ll add them here.</p></div>'}
+function tick(){document.querySelectorAll('.elapsed').forEach(e=>{let ts=Number(e.dataset.ts);e.textContent=ts?elapsed(ts):'Never checked'})}setInterval(tick,30000);
+
+onValue(ref(db,'tracker'),snap=>{const raw=snap.val()||{};data={usa:{},canada:{}};for(const t of ['usa','canada']){const list=t==='usa'?USA:CANADA;for(const loc of list){const item=(raw[t]||{})[firebaseKey(loc)]||{};data[t][loc]={status:item.status||'',checked:item.checked||null,comment:item.comment||''}}}syncStatus.textContent='✓ Shared sync connected';render()},err=>{console.error(err);syncStatus.textContent='⚠ Firebase connection blocked — check database rules';render()});
+
+document.querySelector('#search').oninput=render;document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');team=b.dataset.team;render()});
+render();
+</script></body></html>
